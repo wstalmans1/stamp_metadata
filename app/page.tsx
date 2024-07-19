@@ -61,6 +61,7 @@ export default function Passport() {
     try {
       const response: Response = await fetch(GET_PASSPORT_STAMPS_URI, { headers });
       const data = await response.json();
+      console.log('Raw API response:', data);
       // parse stamp data from json
       let counter = 0;
       for (const i of data.items) {
