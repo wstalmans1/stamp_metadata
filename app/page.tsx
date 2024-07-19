@@ -1,95 +1,123 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client'
+import { useState, useEffect } from 'react'
+import { ethers } from 'ethers'
+import { ChakraProvider, Button, Flex, Heading } from '@chakra-ui/react'
+import { Image, SimpleGrid, Tooltip } from '@chakra-ui/react'
 
-export default function Home() {
+
+const APIKEY = process.env.NEXT_PUBLIC_GC_API_KEY
+const headers = APIKEY ? ({
+  'Content-Type': 'application/json',
+  'X-API-Key': APIKEY
+}) : undefined
+
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
+
+interface Stamp {
+  id: number
+  stamp: string
+  icon: string
+}
+
+export default function Passport() {
+  // here we deal with any local state we need to manage
+  const [address, setAddress] = useState<string>('')
+  const [showStamps, setShowStamps] = useState<boolean>(false)
+  const [stampArray, setStampArray] = useState<Array<Stamp>>([])
+
+  useEffect(() => {
+    setShowStamps(false)
+    checkConnection()
+    async function checkConnection() {
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const accounts = await provider.listAccounts()
+        // if the user is connected, set their account
+        if (accounts && accounts[0]) {
+          setAddress(accounts[0].address)
+        }
+      } catch (err) {
+        console.log('not connected...')
+      }
+    }
+  }, [])
+
+  async function connect() {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+      setAddress(accounts[0])
+    } catch (err) {
+      console.log('error connecting...')
+    }
+  }
+
+  async function getStamps() {
+    const stampDataArray = [];
+    const GET_PASSPORT_STAMPS_URI = `https://api.scorer.gitcoin.co/registry/stamps/${address}?include_metadata=true`;
+    try {
+      const response: Response = await fetch(GET_PASSPORT_STAMPS_URI, { headers });
+      const data = await response.json();
+      // parse stamp data from json
+      let counter = 0;
+      for (const i of data.items) {
+        if (i.credential?.credentialSubject?.provider && i.metadata?.platform?.icon) {
+          let st = {
+            id: counter,
+            stamp: i.credential.credentialSubject.provider,
+            icon: i.metadata.platform.icon
+          };
+          stampDataArray.push(st);
+          counter += 1;
+        } else {
+          console.log('Skipping stamp due to missing data:', i);
+        }
+      }
+      setStampArray(stampDataArray);
+      setShowStamps(true);
+    } catch (err) {
+      console.log('error: ', err);
+    }
+  }
+
+
+  const StampCollection = () => {
+    return (
+      <SimpleGrid minChildWidth='120px' spacing='40px' border='black'>
+        <>
+          {stampArray.map(s => <Tooltip key={s.id} label={s.stamp}><Image src={s.icon} alt={s.stamp} borderRadius='90px' boxSize='80px' fallbackSrc='gtc-logo.svg' backgroundColor='#C3D3D5' /></Tooltip>)}
+        </>
+      </SimpleGrid >
+    )
+  }
+
+  const styles = {
+    main: {
+      width: '900px',
+      margin: '0 auto',
+      paddingTop: 90
+    }
+  }
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+    /* this is the UI for the app */
+    <div style={styles.main}>
+      <ChakraProvider >
+        <Flex minWidth='max-content' alignItems='right' gap='2' justifyContent='right'>
+          <Button colorScheme='teal' variant='outline' onClick={connect}>Connect Wallet</Button>
+          <Button colorScheme='teal' variant='outline' onClick={getStamps}>Show Stamps</Button>
+        </Flex>
+        <br />
+        <br />
+        <Heading as='h1' size='4xl' noOfLines={2}>Gitcoin Stamp Collector</Heading>
+        <br />
+        <br />
+        <br />
+        {showStamps && <StampCollection />}
+      </ChakraProvider >
+    </div >
+  )
 }
