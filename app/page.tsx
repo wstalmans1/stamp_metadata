@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import { ChakraProvider, Button, Flex, Heading } from '@chakra-ui/react'
 import { Image, SimpleGrid, Tooltip } from '@chakra-ui/react'
+import { GITCOIN_PASSPORT_WEIGHTS } from './stamp-weights';
+
 
 
 const APIKEY = process.env.NEXT_PUBLIC_GC_API_KEY
@@ -28,6 +30,10 @@ export default function Passport() {
   const [address, setAddress] = useState<string>('')
   const [showStamps, setShowStamps] = useState<boolean>(false)
   const [stampArray, setStampArray] = useState<Array<Stamp>>([])
+  const [score, setScore] = useState<number>()
+  const [showScore, setShowScore] = useState<boolean>(false)
+  const [customScore, setCustomScore] = useState<number>()
+  const [showCustomScore, setShowCustomScore] = useState<boolean>(false)
 
   useEffect(() => {
     setShowStamps(false)
@@ -84,7 +90,6 @@ export default function Passport() {
     }
   }
 
-
   const StampCollection = () => {
     return (
       <SimpleGrid minChildWidth='120px' spacing='40px' border='black'>
@@ -94,6 +99,69 @@ export default function Passport() {
       </SimpleGrid >
     )
   }
+
+  function calculateGitcoinScore() {
+    let i = 0
+    var scores: Array<number> = []
+    var score = 0;
+    while (i < stampArray.length) {
+      let id = stampArray[i].stamp
+      if (GITCOIN_PASSPORT_WEIGHTS.hasOwnProperty(id)) {
+        try {
+          let temp_score = GITCOIN_PASSPORT_WEIGHTS[id]
+          scores.push(parseFloat(temp_score.toString()))
+        } catch {
+          console.log("element cannot be added to cumulative score")
+        }
+      }
+      i++;
+    }
+    for (let i = 0; i < scores.length; i++) {
+      score += scores[i]
+    }
+    setShowScore(true)
+    setScore(score)
+  }
+
+  const Score = () => {
+    return (
+        <>
+        <p> Your score is {score}</p>
+        </>
+    )
+  }
+
+  function calculateCustomScore() {
+    let i = 0
+    var scores: Array<number> = []
+    var score = 0;
+    while (i < stampArray.length) {
+      let id = stampArray[i].stamp
+      if (GITCOIN_PASSPORT_WEIGHTS.hasOwnProperty(id)) {
+        try {
+          let temp_score = GITCOIN_PASSPORT_WEIGHTS[id]
+          scores.push(parseFloat(temp_score.toString()))
+        } catch {
+          console.log("element cannot be added to cumulative score")
+        }
+      }
+      i++;
+    }
+    for (let i = 0; i < scores.length; i++) {
+      score += scores[i]
+    }
+    const mean = score / stampArray.length
+    setShowCustomScore(true)
+    setCustomScore(mean)
+  }
+
+  const CustomScore = () => {
+    return (
+        <>
+        <p> Your custom score is {customScore}</p>
+        </>
+    )
+  }  
 
   const styles = {
     main: {
@@ -110,6 +178,8 @@ export default function Passport() {
         <Flex minWidth='max-content' alignItems='right' gap='2' justifyContent='right'>
           <Button colorScheme='teal' variant='outline' onClick={connect}>Connect Wallet</Button>
           <Button colorScheme='teal' variant='outline' onClick={getStamps}>Show Stamps</Button>
+          <Button colorScheme='teal' variant='outline' onClick={calculateGitcoinScore}>Get Score</Button>
+          <Button colorScheme='teal' variant='outline' onClick={calculateCustomScore}>Get Custom Score</Button>
         </Flex>
         <br />
         <br />
@@ -118,6 +188,14 @@ export default function Passport() {
         <br />
         <br />
         {showStamps && <StampCollection />}
+        <br />
+        <br />
+        <br />
+        {showScore && <Score />}
+        <br />
+        <br />
+        <br />
+        {showCustomScore && <CustomScore />}
       </ChakraProvider >
     </div >
   )
